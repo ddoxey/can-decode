@@ -318,8 +318,6 @@ class DBC:
                     'to': sg.destination
                 }
         if msg['code'] is None:
-            print('failed to annotate:')
-            print(event)
             return None
         return msg
 
