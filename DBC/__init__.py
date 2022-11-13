@@ -15,7 +15,7 @@ class DBC:
         def __init__(self, raw_text):
             elements = raw_text.split(' ')
             self.name = elements.pop(0).rstrip(':')
-            items = [item for item in [e.strip() for e in elements] if item != ""]
+            self.items = [item for item in [e.strip() for e in elements] if item != ""]
 
         def append(self, item):
             if not isinstance(item, str):
@@ -69,7 +69,7 @@ class DBC:
         def __init__(self, raw_text):
             attr_a, attr_b = raw_text.split(':', 1)
             self.id = int(attr_a.strip())
-            modules = attr_b.strip().split(',')
+            self.modules = attr_b.strip().split(',')
 
         def append(self, module):
             if not isinstance(module, str):
@@ -100,9 +100,9 @@ class DBC:
             self.name = elements.pop(0).strip('"')
             self.data_type = elements.pop(0)
             if len(elements) > 0 and ',' in elements[0]:
-                library = [e.strip('"') for e in elements.split(',')]
+                self.library = [e.strip('"') for e in elements.split(',')]
             else:
-                library = elements
+                self.library = elements
 
         def append(self, value):
             if not isinstance(value, str):
@@ -120,7 +120,7 @@ class DBC:
             elements = attr_b.split(' ')
             while len(elements) > 0:
                 self.rows.append({'type': elements.pop(1),
-                                  'name': elements.pop(0)})
+                                  'index': elements.pop(0)})
 
         def append(self, row):
             if not isinstance(row, dict):
@@ -170,7 +170,7 @@ class DBC:
 
         def __init__(self, raw_text):
             attrs = raw_text.split(' ', 3)
-            self.bo_id = attrs[1]
+            self.bo_id = int(attrs[1])
             self.text = ' '.join(attrs[2:]).strip('"')
 
         def append(self, _):
