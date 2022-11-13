@@ -25,12 +25,9 @@ def print_bitfield(name, indent_n, sgs):
     """
     tiks = {}
     for sg in reversed(sgs):
-        start_bit, bit_len, endian = [int(b) for b in
-                                      re.split(r'[|@+-]', sg['subrecords'][0])
-                                      if b != ""]
-        end_bit = start_bit + bit_len - 1
+        end_bit = int(sg.start_bit) + int(sg.bit_len) - 1
         tiks[end_bit] = True
-        tiks[start_bit] = True
+        tiks[int(sg.start_bit)] = True
     indent_n -= len(name)
     print(name, end="")
     print(''.join([' ' for n in range(indent_n + 2)]), end="[")
@@ -46,13 +43,13 @@ def run(dbc_filename, can_filename, known_option):
 
     dbc = DBC(dbc_filename)
 
-    last_code = ""
+    last_code = 0
 
     with open(can_filename, 'r') as can_fh:
         for line in can_fh:
             event = CAN(line)
             event_str = str(event)
-            bo = dbc.query('BO_', event.code)
+            bo = dbc.query(dbc.BO_, event)
             if bo is None:
                 if known_option == '-k':
                     continue
@@ -62,7 +59,7 @@ def run(dbc_filename, can_filename, known_option):
             if last_code != event.code:
                 print(''.join(['=' for n in range(124)]))
             if bo is not None:
-                print_bitfield(bo['attr'], len(event_str), bo['subrecords'])
+                print_bitfield(bo.name, len(event_str), bo.sgs)
             print(event_str, end=f' : {event.bin_str} = {event.value}\n')
             last_code = event.code
 
