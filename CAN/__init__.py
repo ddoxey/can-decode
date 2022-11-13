@@ -11,7 +11,7 @@ class CAN:
         self.text = re.sub(r'\s+', ' ', line).strip()
         tokens = self.text.split(' ')
         self.interface = tokens[0]
-        self.code = str(int(tokens[1], 16))
+        self.code = int(tokens[1], 16)
         self.byte_n = int(tokens[2].strip('[]'))
         self.value = int('0x{}'.format(''.join(tokens[3:])), 16)
         self.bin_str = format(self.value, '064b')
