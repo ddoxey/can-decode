@@ -189,7 +189,7 @@ class CAN:
     def __init__(self, line):
         tokens = re.sub(r'\s+', ' ', line).strip().split(' ')
         self.interface = tokens[0]
-        self.code = tokens[1]
+        self.code = str(int(tokens[1], 16))
         self.byte_n = tokens[2].strip('[]')
         self.hex_str = ' '.join(tokens[3:])
         self.value = int('0x{}'.format(''.join(tokens[3:])), 16)
