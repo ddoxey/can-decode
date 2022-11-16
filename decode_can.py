@@ -13,7 +13,7 @@ from DBC import DBC
 from CAN import CAN
 
 
-def run(dbc_filename, can_filename):
+def run(dbc_filename, can_filename, verbose):
 
     dbc = DBC(dbc_filename)
 
@@ -27,18 +27,30 @@ def run(dbc_filename, can_filename):
                                                 message['from'], \
                                                 message['fields']
                 for field_name in fields:
-                    value, to_node = fields[field_name]['value'], \
-                                     fields[field_name]['to']
-                    print(f'[{code}] {name}:{field_name} = {value} ({from_node} => {to_node})')
+                    value, to_node, sg_ = fields[field_name]['value'], \
+                                          fields[field_name]['to'],    \
+                                          fields[field_name]['sg_']
+                    if verbose:
+                        bin_str = event.get_binary_str()
+                        sg_rule = ' '.join(sg_.split(':')[1].lstrip().split(' ')[0:3])
+                        print(f'[{code}] {name}:{field_name}\n{bin_str} : <{sg_rule}> : {value}')
+                    else:
+                        print(f'[{code}] {name}:{field_name} = {value} ({from_node} => {to_node})')
 
     return True
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+    if len(sys.argv) < 3:
         raise Exception(f'USAGE {sys.argv[0]} <filename>.dbc <candump-ouput>')
     if not os.path.exists(sys.argv[1]):
         raise Exception(f'No such file: {sys.argv[1]}')
     if not os.path.exists(sys.argv[2]):
         raise Exception(f'No such file: {sys.argv[2]}')
-    run(sys.argv[1], sys.argv[2])
+    verbose = False
+    if len(sys.argv) > 3:
+        if sys.argv[3] == '-v':
+            verbose = True
+        else:
+            raise Exception(f'Unrecognized option: {sys.argv[3]}')
+    run(sys.argv[1], sys.argv[2], verbose)

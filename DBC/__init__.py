@@ -1,5 +1,7 @@
 import re
+import os
 from pprint import pformat, pprint
+from tempfile import TemporaryFile, NamedTemporaryFile
 
 
 class DBC:
@@ -8,9 +10,7 @@ class DBC:
     decode, and annotate CAN messages.
     """
     class LIST_:
-        id = 0
-        name = None
-        items = []
+        id, name, items = None, None, None
 
         def __init__(self, raw_text):
             elements = raw_text.split(' ')
@@ -24,47 +24,68 @@ class DBC:
 
     class BO_:
         id = 0
-        name = None
-        byte_n = None
-        origin = None
-        sgs = []
+        source_txt = None
+        name, byte_n, origin = None, None, None
+        sgs = None
 
         def __init__(self, raw_text):
-            elements = raw_text.split(' ')
+            self.sgs = []
+            self.source_txt = raw_text.strip()
+            attr_a, attr_b = self.source_txt.split(':', 1)
+            elements = [e.strip() for e in attr_a.strip().split(' ')]
             self.id = int(elements[0])
-            self.name = elements[1].rstrip(':')
-            self.byte_n = int(elements[2])
-            self.origin = elements[3]
+            self.name = elements[1]
+            elements = [e.strip() for e in attr_b.strip().split(' ')]
+            self.byte_n = int(elements[0])
+            self.origin = elements[1]
+
+        def __str__(self):
+            return f'{__class__.__name__} {self.id} {self.name}: ' \
+                   f'{self.byte_n} {self.origin}' \
+                   + "".join([f'\n    {e}' for e in self.sgs])
 
         def append(self, sg):
             if not isinstance(sg, DBC.SG_):
                 raise Exception(f'Invalid object appended to {__class__}: {type(sg)}')
+            sg.byte_n = self.byte_n
             self.sgs.append(sg)
 
     class SG_:
         id = 0
-        name = None
-        start_bit, bit_length, endian = None, None, None
+        source_txt = None
+        name, byte_n = None, None
+        start_bit, bit_length = None, None
+        endian, signed = None, False
         scale, offset = None, None
         min_val, max_val = None, None
         units, destination = None, None
 
         def __init__(self, raw_text):
-            attr_a, attr_b = raw_text.split(':', 1)
+            self.source_txt = raw_text.strip()
+            attr_a, attr_b = self.source_txt.split(':', 1)
             self.name = attr_a.strip()
             elements = attr_b.strip().split(' ')
-            self.start_bit, self.bit_len, self.endian = re.split(r'[|@]', elements[0])
+            self.start_bit, self.bit_len, endian_signed = re.split(r'[|@]', elements[0])
+            self.endian = int(re.sub(r'[^0-9]+', "", endian_signed))
+            self.signed = endian_signed.endswith('-')
             self.scale, self.offset = [float(n) for n in elements[1].strip('()').split(',', 1)]
             self.min_val, self.max_val = [float(n) for n in elements[2].strip('[]').split('|', 1)]
             self.units = elements[3].strip('"')
             self.destination = elements[4].strip('"')
+
+        def __str__(self):
+            return f'{__class__.__name__} {self.name} : ' \
+                   f'{self.start_bit}|{self.bit_len}@{self.endian}{self.signed} ' \
+                   f'({self.scale},{self.offset}) ' \
+                   f'[{self.min_val}|{self.max_val} ' \
+                   f'"{self.units}" {self.destination}'
 
         def append(self, row):
             raise Exception(f'Cannot append to {__class__}')
 
     class BO_TX_BU_:
         id = 0
-        modules = []
+        modules = None
 
         def __init__(self, raw_text):
             attr_a, attr_b = raw_text.split(':', 1)
@@ -78,8 +99,7 @@ class DBC:
 
     class BA_DEF_DEF_:
         id = 0
-        name = None
-        value = None
+        name, value = None, None
 
         def __init__(self, raw_text):
             attr_a, attr_b = raw_text.split(' ', 1)
@@ -91,9 +111,8 @@ class DBC:
 
     class BA_DEF_:
         id = 0
-        name = None
-        data_type = None
-        library = []
+        name, data_type = None, None
+        library = None
 
         def __init__(self, raw_text):
             elements = raw_text.split(' ')
@@ -112,9 +131,10 @@ class DBC:
     class VAL_TABLE_:
         id = 0
         name = None
-        rows = []
+        rows = None
 
         def __init__(self, raw_text):
+            self.rows = []
             attr_a, attr_b = raw_text.split(' ', 1)
             self.name = attr_a.strip()
             elements = attr_b.split(' ')
@@ -130,9 +150,10 @@ class DBC:
     class VAL_:
         id = 0
         name = None
-        rows = []
+        rows = None
 
         def __init__(self, raw_text):
+            self.rows = []
             attr_a, attr_b, attr_c = raw_text.split(' ', 2)
             self.name = f'{attr_a} {attr_b}'
             elements = attr_c.split(' ')
@@ -148,9 +169,10 @@ class DBC:
     class BA_:
         id = 0
         name = None
-        rows = []
+        rows = None
 
         def __init__(self, raw_text):
+            self.rows = []
             attrs = raw_text.split(' ', 4)
             last_i = len(attrs) - 1
             self.name = ' '.join(attrs[0:last_i])
@@ -180,7 +202,7 @@ class DBC:
         id = 0
         bo_id = None
         name = None
-        members = []
+        members = None
 
         def __init__(self, raw_text):
             attr_a, attr_b = raw_text.split(':', 1)
@@ -191,13 +213,21 @@ class DBC:
         def append(self, _):
             raise Exception(f'Cannot append to {__class__}')
 
-    filename = None
-    version = ""
-    records = []
+    filename, version, records = None, None, None
 
     def __init__(self, filename):
-        self.filename = filename
-        with open(self.filename, 'r') as dbc_fh:
+        self.filename = None
+        self.version = ""
+        self.records = []
+        temp_file = None
+        if "\n" in filename or not os.path.exists(filename):
+            temp_file = NamedTemporaryFile()
+            with open(temp_file.name, 'w') as dbc_fh:
+                dbc_fh.write(filename)
+            filename = temp_file.name
+        else:
+            self.filename = filename
+        with open(filename, 'r') as dbc_fh:
             for line in dbc_fh:
                 line = line.rstrip().rstrip(';').rstrip()
                 if len(line) == 0:
@@ -278,24 +308,6 @@ class DBC:
                 return record
         return None
 
-    def decode(self, value, sg):
-        """
-        Given an int value and a collection of signal syntax (SG) tokens this
-        decodes out the encoded value.
-        """
-        # TODO account for sg.endian (0+ 0- 1+ 1-)
-        bitmask = (pow(2, int(sg.bit_len)) - 1) << int(sg.start_bit)
-        value = int(value) & bitmask
-        value = sg.offset + sg.scale * value
-        if sg.min_val < sg.max_val:
-            value = max(value, sg.min_val)
-        if sg.max_val > sg.min_val:
-            value = min(sg.max_val, value)
-        value = re.sub(r'[.]0$', "", str(value))
-        if sg.units != "":
-            return f'{value} {sg.units}'
-        return value
-
     def annotate(self, event):
         """
         Given a CAN event this will identify and
@@ -308,14 +320,15 @@ class DBC:
             'from': None,
             'fields': {}
         }
-        ob = self.query(self.BO_, event)
-        if ob is not None:
+        bo = self.query(self.BO_, event)
+        if bo is not None:
             msg['code'] = event.code
-            msg['name'], msg['byte_n'], msg['from'] = ob.name, ob.byte_n, ob.origin
-            for sg in ob.sgs:
+            msg['name'], msg['byte_n'], msg['from'] = bo.name, bo.byte_n, bo.origin
+            for sg in bo.sgs:
                 msg['fields'][sg.name] = {
-                    'value': self.decode(event.value, sg),
-                    'to': sg.destination
+                    'value': event.decode(sg),
+                    'to': sg.destination,
+                    'sg_': str(sg)
                 }
         if msg['code'] is None:
             return None
