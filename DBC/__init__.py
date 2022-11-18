@@ -10,8 +10,6 @@ class DBC:
     decode, and annotate CAN messages.
     """
     class LIST_:
-        id, name, items = None, None, None
-
         def __init__(self, raw_text):
             elements = raw_text.split(' ')
             self.name = elements.pop(0).rstrip(':')
@@ -23,11 +21,6 @@ class DBC:
             self.items.append(item)
 
     class BO_:
-        id = 0
-        source_txt = None
-        name, byte_n, origin = None, None, None
-        sgs = None
-
         def __init__(self, raw_text):
             self.sgs = []
             self.source_txt = raw_text.strip()
@@ -51,15 +44,6 @@ class DBC:
             self.sgs.append(sg)
 
     class SG_:
-        id = 0
-        source_txt = None
-        name, byte_n = None, None
-        start_bit, bit_length = None, None
-        endian, signed = None, False
-        scale, offset = None, None
-        min_val, max_val = None, None
-        units, destination = None, None
-
         def __init__(self, raw_text):
             self.source_txt = raw_text.strip()
             attr_a, attr_b = self.source_txt.split(':', 1)
@@ -84,9 +68,6 @@ class DBC:
             raise Exception(f'Cannot append to {__class__}')
 
     class BO_TX_BU_:
-        id = 0
-        modules = None
-
         def __init__(self, raw_text):
             attr_a, attr_b = raw_text.split(':', 1)
             self.id = int(attr_a.strip())
@@ -98,9 +79,6 @@ class DBC:
             self.modules.append(module)
 
     class BA_DEF_DEF_:
-        id = 0
-        name, value = None, None
-
         def __init__(self, raw_text):
             attr_a, attr_b = raw_text.split(' ', 1)
             self.name = attr_a.strip('"')
@@ -110,10 +88,6 @@ class DBC:
             raise Exception(f'Cannot append to {__class__}')
 
     class BA_DEF_:
-        id = 0
-        name, data_type = None, None
-        library = None
-
         def __init__(self, raw_text):
             elements = raw_text.split(' ')
             self.name = elements.pop(0).strip('"')
@@ -129,10 +103,6 @@ class DBC:
             self.library.append(value.strip('"'))
 
     class VAL_TABLE_:
-        id = 0
-        name = None
-        rows = None
-
         def __init__(self, raw_text):
             self.rows = []
             attr_a, attr_b = raw_text.split(' ', 1)
@@ -148,10 +118,6 @@ class DBC:
             self.rows.append(row)
 
     class VAL_:
-        id = 0
-        name = None
-        rows = None
-
         def __init__(self, raw_text):
             self.rows = []
             attr_a, attr_b, attr_c = raw_text.split(' ', 2)
@@ -167,10 +133,6 @@ class DBC:
             self.rows.append(row)
 
     class BA_:
-        id = 0
-        name = None
-        rows = None
-
         def __init__(self, raw_text):
             self.rows = []
             attrs = raw_text.split(' ', 4)
@@ -186,10 +148,6 @@ class DBC:
             self.rows.append(row)
 
     class CM_:
-        id = 0
-        bo_id = None
-        text = None
-
         def __init__(self, raw_text):
             attrs = raw_text.split(' ', 3)
             self.bo_id = int(attrs[1])
@@ -199,11 +157,6 @@ class DBC:
             raise Exception(f'Cannot append to {__class__}')
 
     class SIG_GROUP_:
-        id = 0
-        bo_id = None
-        name = None
-        members = None
-
         def __init__(self, raw_text):
             attr_a, attr_b = raw_text.split(':', 1)
             self.bo_id = int(attr_a.split(' ', 1)[0])
@@ -212,8 +165,6 @@ class DBC:
 
         def append(self, _):
             raise Exception(f'Cannot append to {__class__}')
-
-    filename, version, records = None, None, None
 
     def __init__(self, filename):
         self.filename = None

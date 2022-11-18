@@ -144,6 +144,40 @@ class TestANDecode(unittest.TestCase):
 
         self.run_dbc_decode(dbc_text, can_text, expect)
 
+    def test_negative_scaled_offset_big_endian(self):
+        """
+            HEX:    F    F    F    F    F    F    F    F    0    4    0    3
+            BIN: 1111 1111 1111 1111 1111 1111 1111 1111 0000 0100 0000 0011
+                                                       |                 |
+                                                      15                 1
+            150 + (-256 * 2.5) => -790
+        """
+        dbc_text = 'BO_ 1001 XYZ_message: 6 ABC\n' \
+                   '    SG_ XYZ_messageID B : 2|15@0- (2.5,150) [-3000|4] "MPH" XYZ\n'
+
+        can_text = " can0 3E9 [6] 03 04 FF FF FF FF"
+
+        expect = {
+            'event_interface': "can0",
+            'event_code': 1001,
+            'event_byte_n': 6,
+            'bo_name': "XYZ_message",
+            'bo_byte_n': 6,
+            'bo_origin': "ABC",
+            'sg_name': 'XYZ_messageID B',
+            'sg_start_bit': '2',
+            'sg_bit_len': '15',
+            'sg_min_val': -3000.0,
+            'sg_max_val': 4.0,
+            'sg_scale': 2.5,
+            'sg_offset': 150.0,
+            'sg_units': "MPH",
+            'sg_destination': "XYZ",
+            'decoded_value': '-790 MPH',
+        }
+
+        self.run_dbc_decode(dbc_text, can_text, expect)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -39,7 +39,7 @@ class CAN:
         decodes out the encoded value.
         """
         sign = 0
-        value = int(self.get_value(sg))
+        value = int(self.get_value(sg.endian))
         bitmask = (pow(2, int(sg.bit_len)) - 1) << int(sg.start_bit)
         value = (value & bitmask)
         value = value >> int(sg.start_bit)
