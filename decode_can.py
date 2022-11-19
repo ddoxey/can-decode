@@ -13,7 +13,7 @@ from DBC import DBC
 from CAN import CAN
 
 
-def run(dbc_filename, can_filename, verbose):
+def run(dbc_filename, can_filename, verbose, annotation):
 
     dbc = DBC(dbc_filename)
 
@@ -34,6 +34,9 @@ def run(dbc_filename, can_filename, verbose):
                         bin_str = event.get_binary_str()
                         sg_rule = ' '.join(sg_.split(':')[1].lstrip().split(' ')[0:3])
                         print(f'[{code}] {name}:{field_name}\n{bin_str} : <{sg_rule}> : {value}')
+                    elif annotation:
+                        line = line.strip()
+                        print(f'{line: <40} #  {name}:{field_name} = {value}')
                     else:
                         print(f'[{code}] {name}:{field_name} = {value} ({from_node} => {to_node})')
             elif verbose:
@@ -44,15 +47,20 @@ def run(dbc_filename, can_filename, verbose):
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        raise Exception(f'USAGE {sys.argv[0]} <filename>.dbc <candump-ouput>')
+        raise Exception(f'USAGE {sys.argv[0]} <filename>.dbc <candump-ouput> [-v] [-a]')
     if not os.path.exists(sys.argv[1]):
         raise Exception(f'No such file: {sys.argv[1]}')
     if not os.path.exists(sys.argv[2]):
         raise Exception(f'No such file: {sys.argv[2]}')
-    verbose = False
+    verbose, annotation = False, False
     if len(sys.argv) > 3:
-        if sys.argv[3] == '-v':
-            verbose = True
-        else:
-            raise Exception(f'Unrecognized option: {sys.argv[3]}')
-    run(sys.argv[1], sys.argv[2], verbose)
+        for argc in range(3, len(sys.argv)):
+            if sys.argv[argc] == '-v':
+                verbose = True
+            elif sys.argv[argc] == '-a':
+                annotation = True
+            else:
+                raise Exception(f'Unrecognized option: {sys.argv[3]}')
+    if verbose and annotation:
+        raise Exception('The -v and -a options are mutually exclusive.')
+    run(sys.argv[1], sys.argv[2], verbose, annotation)
