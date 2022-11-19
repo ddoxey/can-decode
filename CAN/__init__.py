@@ -24,7 +24,7 @@ class CAN:
 
     def get_hex_str(self, endian = 1):
         hex_bytes = self.get_hex_bytes(endian)
-        self.hex_str = ' '.join(hex_bytes)
+        return ' '.join(hex_bytes)
 
     def get_value(self, endian = 1):
         hex_bytes = self.get_hex_bytes(endian)

@@ -36,6 +36,8 @@ def run(dbc_filename, can_filename, verbose):
                         print(f'[{code}] {name}:{field_name}\n{bin_str} : <{sg_rule}> : {value}')
                     else:
                         print(f'[{code}] {name}:{field_name} = {value} ({from_node} => {to_node})')
+            elif verbose:
+                print(f'NO DECODE FOR: {event}')
 
     return True
 
